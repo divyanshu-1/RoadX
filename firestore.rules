@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Vehicles collection (root level)
+    match /vehicles/{vehicleId} {
+      allow read: if request.auth != null && 
+                  (resource.data.owner_uid == request.auth.uid || isAdmin());
+      allow create: if request.auth != null && 
+                   request.resource.data.owner_uid == request.auth.uid;
+      allow update, delete: if request.auth != null && 
+                             (resource.data.owner_uid == request.auth.uid || isAdmin());
+    }
+    
+    // Vehicle Documents collection
+    match /vehicle_documents/{docId} {
+      allow read, write: if request.auth != null;
+      // Simplified: authenticated users can manage documents
+      // Vehicle ownership validation happens in app layer for performance
+    }
+    
+    // Drivers collection
+    match /drivers/{driverId} {
+      allow read, write: if request.auth != null;
+      // Simplified: authenticated users can manage drivers
+      // Vehicle ownership validation happens in app layer for performance
+    }
+    
+    // Incidents collection
+    match /incidents/{incidentId} {
+      allow create: if request.auth != null && 
+                   request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && 
+                  (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if request.auth != null && 
+                   (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if request.auth != null && 
+                   (resource.data.userId == request.auth.uid || isAdmin());
+    }
+    
+    // Challans collection (for future use)
+    match /challans/{challanId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null && isAdmin();
+    }
+    
+    // Legacy nested vehicles (for backward compatibility)
+    match /users/{userId}/vehicles/{vehicleId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      match /authorizedUsers/{authorizedUserId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Police stations collection
+    match /police_stations/{stationId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+    
+    // Patrols collection
+    match /patrols/{patrolId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+    
+    // Default: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

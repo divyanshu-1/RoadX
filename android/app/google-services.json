@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "726016739872",
+    "project_id": "mainroadx",
+    "storage_bucket": "mainroadx.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726016739872:android:fe50a7bcb7da10b02e0a45",
+        "android_client_info": {
+          "package_name": "com.example.roadx"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWImTEOp-3uC3prIHswk_brvtNE05DCS8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
