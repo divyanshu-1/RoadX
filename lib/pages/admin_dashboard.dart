@@ -4,6 +4,57 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../theme.dart';
 import '../screens.dart';
 
+class AdminPanelGuarded extends StatelessWidget {
+  const AdminPanelGuarded({super.key});
+
+  Future<bool> _checkIsAdmin() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final data = doc.data() ?? {};
+    return data['isAdmin'] == true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _checkIsAdmin(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final isAdmin = snapshot.data == true;
+
+        if (!isAdmin) {
+          // Redirect non-admins away from the admin panel
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Admin access required'),
+              ),
+            );
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              AppRoutes.userShell,
+              (route) => false,
+            );
+          });
+
+          return const Scaffold(
+            body: SizedBox.shrink(),
+          );
+        }
+
+        return const AdminPanel();
+      },
+    );
+  }
+}
+
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
   @override
@@ -276,20 +327,27 @@ class _UsersView extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('users').snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.data!.docs.isEmpty) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
             return const Center(child: Text('No users found'));
           }
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.docs.length,
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              final userDoc = snapshot.data!.docs[index];
-              final userData = userDoc.data() as Map<String, dynamic>;
+              final userDoc = docs[index];
+              final rawUser = userDoc.data();
+              final userData = rawUser is Map<String, dynamic> ? rawUser : <String, dynamic>{};
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -404,7 +462,7 @@ class _VehiclesView extends StatelessWidget {
 
       // Enrich vehicles with owner names
       for (final vehicleDoc in vehicles) {
-        final vehicleData = vehicleDoc.data() as Map<String, dynamic>;
+        final Map<String, dynamic> vehicleData = vehicleDoc.data();
         final ownerUid = vehicleData['owner_uid'] as String?;
 
         enriched.add({
@@ -448,22 +506,33 @@ class _IncidentsView extends StatelessWidget {
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.data!.docs.isEmpty) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
             return const Center(child: Text('No incidents reported'));
           }
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.docs.length,
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              final incidentDoc = snapshot.data!.docs[index];
-              final incidentData = incidentDoc.data() as Map<String, dynamic>;
-              final type = incidentData['type'] ?? 'unknown';
+              final incidentDoc = docs[index];
+              final raw = incidentDoc.data();
+              final incidentData = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+              final type = incidentData['type'] as String? ?? 'unknown';
               final timestamp = incidentData['timestamp'] as Timestamp?;
+              final vehicleNo = incidentData['vehicle_no'] as String? ?? 'N/A';
+              final ownerName = incidentData['owner_name'] as String? ?? 'N/A';
+              final status = incidentData['status'] as String? ?? 'reported';
+              final location = incidentData['location'] as String? ?? 'N/A';
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -483,8 +552,10 @@ class _IncidentsView extends StatelessWidget {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Vehicle: ${incidentData['vehicle_no'] ?? 'N/A'}'),
-                      Text('Owner: ${incidentData['owner_name'] ?? 'N/A'}'),
+                      Text('Vehicle: $vehicleNo'),
+                      Text('Owner: $ownerName'),
+                      Text('Location: $location'),
+                      Text('Status: ${_getStatusDisplay(status)}'),
                       if (timestamp != null)
                         Text(
                           'Time: ${timestamp.toDate().toString().substring(0, 19)}',
@@ -526,6 +597,23 @@ class _IncidentsView extends StatelessWidget {
         return 'Other Incident';
       default:
         return type;
+    }
+  }
+
+  String _getStatusDisplay(String status) {
+    switch (status) {
+      case 'reported':
+        return 'Reported';
+      case 'acknowledged':
+        return 'Acknowledged';
+      case 'in_progress':
+        return 'In Progress';
+      case 'resolved':
+        return 'Resolved';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
     }
   }
 }

@@ -34,15 +34,13 @@ class _LoginPageState extends State<LoginPage> {
       final isAdmin = userData['isAdmin'] == true;
 
       if (asAdmin) {
-        // ✅ Admin login button pressed
-        if (!userDoc.exists) {
-          await userRef.set({
-            'email': email.text.trim(),
-            'isAdmin': true,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-        } else if (!isAdmin) {
-          await userRef.update({'isAdmin': true});
+        // ✅ Admin login button pressed - only allow if user is already marked as admin
+        if (!userDoc.exists || !isAdmin) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('You are not authorized to access the admin panel.')),
+          );
+          await _auth.signOut();
+          return;
         }
         Navigator.pushReplacementNamed(context, AppRoutes.admin);
       } else {

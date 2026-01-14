@@ -38,8 +38,8 @@ class MyApp extends StatelessWidget {
         // User interface after login
         AppRoutes.userShell: (context) => const UserShell(),
 
-        // Admin dashboard (renamed from AdminPanel)
-        AppRoutes.admin: (context) => const AdminPanel(),
+        // Admin dashboard (guarded)
+        AppRoutes.admin: (context) => const AdminPanelGuarded(),
 
         // Emergency reporting page
         AppRoutes.emergency: (context) => const EmergencyScreen(),

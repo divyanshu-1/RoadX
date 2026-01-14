@@ -5,7 +5,7 @@ import '../theme.dart';
 import 'vehicle_registration.dart';
 import 'emergency_screen.dart';
 import 'driver_registration.dart';
-import 'vehicle_documents.dart';
+import 'incident_history.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -71,7 +71,12 @@ class HomePage extends StatelessWidget {
                   icon: Icons.history,
                   title: 'Incident History',
                   description: 'View past reports',
-                  onTap: () => _showIncidentHistory(context, uid),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const IncidentHistoryPage(),
+                    ),
+                  ),
                 ),
                 _FeatureCard(
                   icon: Icons.person_add,
@@ -203,164 +208,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  void _showIncidentHistory(BuildContext context, String uid) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 12),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: const Text(
-                    'Incident History',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('incidents')
-                        .where('userId', isEqualTo: uid)
-                        .orderBy('timestamp', descending: true)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}'));
-                      }
-
-                      final incidents = snapshot.data?.docs ?? [];
-
-                      if (incidents.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            'No incidents reported yet.',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        );
-                      }
-
-                      return ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: incidents.length,
-                        itemBuilder: (context, index) {
-                          final doc = incidents[index];
-                          final data = doc.data() as Map<String, dynamic>;
-                          final type = data['type'] ?? 'unknown';
-                          final timestamp = data['timestamp'] as Timestamp?;
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: AppColors.primarySkyBlue,
-                                child: Icon(
-                                  _getTypeIcon(type),
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                              title: Text(
-                                _getTypeDisplay(type),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Vehicle: ${data['vehicle_no'] ?? 'N/A'}'),
-                                  if (timestamp != null)
-                                    Text(
-                                      _formatTimestamp(timestamp.toDate()),
-                                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  IconData _getTypeIcon(String type) {
-    switch (type) {
-      case 'theft':
-        return Icons.car_crash;
-      case 'scam_fraud':
-        return Icons.warning;
-      case 'unauthorized_driver':
-        return Icons.person_off;
-      default:
-        return Icons.error;
-    }
-  }
-
-  String _getTypeDisplay(String type) {
-    switch (type) {
-      case 'theft':
-        return 'Theft (Gadi chori)';
-      case 'scam_fraud':
-        return 'Scam/Fraud';
-      case 'unauthorized_driver':
-        return 'Unauthorized Driver';
-      case 'other':
-        return 'Other Incident';
-      default:
-        return type;
-    }
-  }
-
-  String _formatTimestamp(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inHours < 1) {
-      return '${difference.inMinutes} minutes ago';
-    } else if (difference.inDays < 1) {
-      return '${difference.inHours} hours ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-    }
-  }
 }
 
 class _FeatureCard extends StatelessWidget {

@@ -13,7 +13,6 @@ class EmergencyScreen extends StatefulWidget {
 
 class _EmergencyScreenState extends State<EmergencyScreen> {
   final _vehicleNoController = TextEditingController();
-  final _typeController = TextEditingController();
   String? selectedType;
   bool _isLoading = false;
 
@@ -61,6 +60,9 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
         'type': selectedType,
         'owner_name': ownerName,
         'timestamp': FieldValue.serverTimestamp(),
+        // Basic fields used by history/admin views
+        'status': 'reported',
+        'location': 'N/A',
       });
 
       ScaffoldMessenger.of(context).showSnackBar(

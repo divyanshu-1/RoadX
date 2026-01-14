@@ -24,12 +24,19 @@ class UserShell extends StatefulWidget {
 
 class _UserShellState extends State<UserShell> {
   int index = 0;
-  final List<Widget> pages = [
-    const HomePage(),
-    const DashboardPage(),
-    const EmergencyPage(),
-    const ProfilePage(),
-  ];
+  late final List<Widget> pages;
+
+  @override
+  void initState() {
+    super.initState();
+    // Use const pages where possible so state inside each tab is preserved
+    pages = const [
+      HomePage(),
+      DashboardPage(),
+      EmergencyPage(),
+      ProfilePage(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +52,11 @@ class _UserShellState extends State<UserShell> {
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
       ),
-      body: pages[index],
+      // Use IndexedStack so tab state is preserved when switching
+      body: IndexedStack(
+        index: index,
+        children: pages,
+      ),
       bottomNavigationBar: SemiCircularBottomNav(
         currentIndex: index,
         onTap: (i) => setState(() => index = i),
