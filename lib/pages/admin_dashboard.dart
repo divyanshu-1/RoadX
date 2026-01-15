@@ -62,7 +62,20 @@ class AdminPanel extends StatefulWidget {
 }
 
 class _AdminPanelState extends State<AdminPanel> {
-  String? selectedView;
+  int currentIndex = 0;
+  late final List<Widget> pages;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize pages - IndexedStack will preserve state when switching tabs
+    pages = [
+      const _DashboardOverview(),
+      const _UsersView(),
+      const _VehiclesView(),
+      const _IncidentsView(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,87 +105,139 @@ class _AdminPanelState extends State<AdminPanel> {
           ),
         ],
       ),
-      body: selectedView == null ? _buildMainMenu() : _buildSelectedView(),
+      // Use IndexedStack so tab state is preserved when switching
+      body: IndexedStack(
+        index: currentIndex,
+        children: pages,
+      ),
+      bottomNavigationBar: AdminBottomNav(
+        currentIndex: currentIndex,
+        onTap: (i) => setState(() => currentIndex = i),
+      ),
     );
-  }
-
-  Widget _buildMainMenu() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const SizedBox(height: 20),
-        const Text(
-          'Admin Dashboard',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 32),
-        _MenuListTile(
-          icon: Icons.dashboard,
-          title: 'Dashboard Overview',
-          onTap: () => setState(() => selectedView = 'dashboard'),
-        ),
-        _MenuListTile(
-          icon: Icons.people,
-          title: 'Users',
-          onTap: () => setState(() => selectedView = 'users'),
-        ),
-        _MenuListTile(
-          icon: Icons.directions_car,
-          title: 'Vehicles',
-          onTap: () => setState(() => selectedView = 'vehicles'),
-        ),
-        _MenuListTile(
-          icon: Icons.warning,
-          title: 'Incidents',
-          onTap: () => setState(() => selectedView = 'incidents'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSelectedView() {
-    switch (selectedView) {
-      case 'dashboard':
-        return _DashboardOverview(onBack: () => setState(() => selectedView = null));
-      case 'users':
-        return _UsersView(onBack: () => setState(() => selectedView = null));
-      case 'vehicles':
-        return _VehiclesView(onBack: () => setState(() => selectedView = null));
-      case 'incidents':
-        return _IncidentsView(onBack: () => setState(() => selectedView = null));
-      default:
-        return _buildMainMenu();
-    }
   }
 }
 
-class _MenuListTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
+// Admin Bottom Navigation Bar
+class AdminBottomNav extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
 
-  const _MenuListTile({
-    required this.icon,
-    required this.title,
+  const AdminBottomNav({
+    super.key,
+    required this.currentIndex,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: Icon(icon, color: AppColors.primarySkyBlue, size: 32),
-        title: Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _AdminNavItem(
+              icon: Icons.dashboard_outlined,
+              selectedIcon: Icons.dashboard,
+              label: 'Dashboard',
+              index: 0,
+              currentIndex: currentIndex,
+              onTap: () => onTap(0),
+            ),
+            _AdminNavItem(
+              icon: Icons.people_outline,
+              selectedIcon: Icons.people,
+              label: 'Users',
+              index: 1,
+              currentIndex: currentIndex,
+              onTap: () => onTap(1),
+            ),
+            _AdminNavItem(
+              icon: Icons.directions_car_outlined,
+              selectedIcon: Icons.directions_car,
+              label: 'Vehicles',
+              index: 2,
+              currentIndex: currentIndex,
+              onTap: () => onTap(2),
+            ),
+            _AdminNavItem(
+              icon: Icons.warning_outlined,
+              selectedIcon: Icons.warning,
+              label: 'Incidents',
+              index: 3,
+              currentIndex: currentIndex,
+              onTap: () => onTap(3),
+            ),
+          ],
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 20),
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      ),
+    );
+  }
+}
+
+class _AdminNavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final int index;
+  final int currentIndex;
+  final VoidCallback onTap;
+
+  const _AdminNavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.index,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = index == currentIndex;
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isSelected ? selectedIcon : icon,
+                  color: isSelected ? AppColors.primarySkyBlue : Colors.grey,
+                  size: 24,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isSelected ? AppColors.primarySkyBlue : Colors.grey,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -180,9 +245,7 @@ class _MenuListTile extends StatelessWidget {
 
 // Dashboard Overview
 class _DashboardOverview extends StatelessWidget {
-  final VoidCallback onBack;
-
-  const _DashboardOverview({required this.onBack});
+  const _DashboardOverview();
 
   @override
   Widget build(BuildContext context) {
@@ -202,52 +265,44 @@ class _DashboardOverview extends StatelessWidget {
         final totalVehicles = data['totalVehicles'] ?? 0;
         final totalIncidents = data['totalIncidents'] ?? 0;
 
-        return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: onBack,
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            const SizedBox(height: 8),
+            const Text(
+              'Dashboard Overview',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
-            title: const Text('Dashboard Overview'),
-            centerTitle: true,
-            flexibleSpace: Container(
-              decoration: const BoxDecoration(gradient: AppGradients.button),
+            const SizedBox(height: 24),
+            GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _StatCard(
+                  title: 'Total Users',
+                  value: totalUsers.toString(),
+                  icon: Icons.people,
+                  color: AppColors.primarySkyBlue,
+                ),
+                _StatCard(
+                  title: 'Total Vehicles',
+                  value: totalVehicles.toString(),
+                  icon: Icons.directions_car,
+                  color: AppColors.accentLightBlue,
+                ),
+                _StatCard(
+                  title: 'Total Incidents',
+                  value: totalIncidents.toString(),
+                  icon: Icons.warning,
+                  color: Colors.orange,
+                ),
+              ],
             ),
-            backgroundColor: Colors.transparent,
-            foregroundColor: Colors.white,
-          ),
-          body: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _StatCard(
-                    title: 'Total Users',
-                    value: totalUsers.toString(),
-                    icon: Icons.people,
-                    color: AppColors.primarySkyBlue,
-                  ),
-                  _StatCard(
-                    title: 'Total Vehicles',
-                    value: totalVehicles.toString(),
-                    icon: Icons.directions_car,
-                    color: AppColors.accentLightBlue,
-                  ),
-                  _StatCard(
-                    title: 'Total Incidents',
-                    value: totalIncidents.toString(),
-                    icon: Icons.warning,
-                    color: Colors.orange,
-                  ),
-                ],
-              ),
-            ],
-          ),
+          ],
         );
       },
     );
@@ -304,134 +359,128 @@ class _StatCard extends StatelessWidget {
 
 // Users View
 class _UsersView extends StatelessWidget {
-  final VoidCallback onBack;
-
-  const _UsersView({required this.onBack});
+  const _UsersView();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: onBack,
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'Users',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
         ),
-        title: const Text('Users'),
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(gradient: AppGradients.button),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('users').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('users').snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-          final docs = snapshot.data?.docs ?? [];
+              final docs = snapshot.data?.docs ?? [];
 
-          if (docs.isEmpty) {
-            return const Center(child: Text('No users found'));
-          }
+              if (docs.isEmpty) {
+                return const Center(child: Text('No users found'));
+              }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final userDoc = docs[index];
-              final rawUser = userDoc.data();
-              final userData = rawUser is Map<String, dynamic> ? rawUser : <String, dynamic>{};
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: docs.length,
+                itemBuilder: (context, index) {
+                  final userDoc = docs[index];
+                  final rawUser = userDoc.data();
+                  final userData = rawUser is Map<String, dynamic> ? rawUser : <String, dynamic>{};
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: const Icon(Icons.person, color: AppColors.primarySkyBlue),
-                  title: Text(
-                    userData['name'] ?? userData['email'] ?? 'Unknown User',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(userData['email'] ?? 'N/A'),
-                ),
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: const Icon(Icons.person, color: AppColors.primarySkyBlue),
+                      title: Text(
+                        userData['name'] ?? userData['email'] ?? 'Unknown User',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(userData['email'] ?? 'N/A'),
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 }
 
 // Vehicles View
 class _VehiclesView extends StatelessWidget {
-  final VoidCallback onBack;
-
-  const _VehiclesView({required this.onBack});
+  const _VehiclesView();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: onBack,
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'Vehicles',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
         ),
-        title: const Text('Vehicles'),
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(gradient: AppGradients.button),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-      ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _loadAllVehicles(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        Expanded(
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _loadAllVehicles(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No vehicles found'));
-          }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('No vehicles found'));
+              }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.length,
-            itemBuilder: (context, index) {
-              final vehicle = snapshot.data![index];
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: snapshot.data!.length,
+                itemBuilder: (context, index) {
+                  final vehicle = snapshot.data![index];
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: const Icon(Icons.directions_car, color: AppColors.primarySkyBlue),
-                  title: Text(
-                    vehicle['vehicle_no'] ?? 'N/A',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Model: ${vehicle['model'] ?? 'N/A'}'),
-                      Text('Owner: ${vehicle['owner_name'] ?? 'N/A'}'),
-                    ],
-                  ),
-                ),
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: const Icon(Icons.directions_car, color: AppColors.primarySkyBlue),
+                      title: Text(
+                        vehicle['vehicle_no'] ?? 'N/A',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Model: ${vehicle['model'] ?? 'N/A'}'),
+                          Text('Owner: ${vehicle['owner_name'] ?? 'N/A'}'),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -480,95 +529,92 @@ class _VehiclesView extends StatelessWidget {
 
 // Incidents View
 class _IncidentsView extends StatelessWidget {
-  final VoidCallback onBack;
-
-  const _IncidentsView({required this.onBack});
+  const _IncidentsView();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: onBack,
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'Incidents',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
         ),
-        title: const Text('Incidents'),
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(gradient: AppGradients.button),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('incidents')
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('incidents')
+                .orderBy('timestamp', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-          final docs = snapshot.data?.docs ?? [];
+              final docs = snapshot.data?.docs ?? [];
 
-          if (docs.isEmpty) {
-            return const Center(child: Text('No incidents reported'));
-          }
+              if (docs.isEmpty) {
+                return const Center(child: Text('No incidents reported'));
+              }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final incidentDoc = docs[index];
-              final raw = incidentDoc.data();
-              final incidentData = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
-              final type = incidentData['type'] as String? ?? 'unknown';
-              final timestamp = incidentData['timestamp'] as Timestamp?;
-              final vehicleNo = incidentData['vehicle_no'] as String? ?? 'N/A';
-              final ownerName = incidentData['owner_name'] as String? ?? 'N/A';
-              final status = incidentData['status'] as String? ?? 'reported';
-              final location = incidentData['location'] as String? ?? 'N/A';
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: docs.length,
+                itemBuilder: (context, index) {
+                  final incidentDoc = docs[index];
+                  final raw = incidentDoc.data();
+                  final incidentData = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+                  final type = incidentData['type'] as String? ?? 'unknown';
+                  final timestamp = incidentData['timestamp'] as Timestamp?;
+                  final vehicleNo = incidentData['vehicle_no'] as String? ?? 'N/A';
+                  final ownerName = incidentData['owner_name'] as String? ?? 'N/A';
+                  final status = incidentData['status'] as String? ?? 'reported';
+                  final location = incidentData['location'] as String? ?? 'N/A';
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.primarySkyBlue,
-                    child: Icon(
-                      _getTypeIcon(type),
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(
-                    _getTypeDisplay(type),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Vehicle: $vehicleNo'),
-                      Text('Owner: $ownerName'),
-                      Text('Location: $location'),
-                      Text('Status: ${_getStatusDisplay(status)}'),
-                      if (timestamp != null)
-                        Text(
-                          'Time: ${timestamp.toDate().toString().substring(0, 19)}',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.primarySkyBlue,
+                        child: Icon(
+                          _getTypeIcon(type),
+                          color: Colors.white,
+                          size: 20,
                         ),
-                    ],
-                  ),
-                ),
+                      ),
+                      title: Text(
+                        _getTypeDisplay(type),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Vehicle: $vehicleNo'),
+                          Text('Owner: $ownerName'),
+                          Text('Location: $location'),
+                          Text('Status: ${_getStatusDisplay(status)}'),
+                          if (timestamp != null)
+                            Text(
+                              'Time: ${timestamp.toDate().toString().substring(0, 19)}',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 
