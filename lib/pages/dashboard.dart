@@ -17,39 +17,6 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  Future<int> _getActiveDriversCount(String userId) async {
-    try {
-      // Get user's vehicles
-      final vehiclesSnapshot = await FirebaseFirestore.instance
-          .collection('vehicles')
-          .where('owner_uid', isEqualTo: userId)
-          .get();
-      
-      final userVehicleIds = vehiclesSnapshot.docs.map((v) => v.id).toSet();
-      
-      // Get all drivers
-      final driversSnapshot = await FirebaseFirestore.instance
-          .collection('drivers')
-          .get();
-      
-      // Count active drivers for user's vehicles
-      int count = 0;
-      for (final driverDoc in driversSnapshot.docs) {
-        final driverData = driverDoc.data();
-        final vehicleId = driverData['vehicleId'] as String?;
-        final isActive = driverData['isActive'] == true;
-        
-        if (vehicleId != null && userVehicleIds.contains(vehicleId) && isActive) {
-          count++;
-        }
-      }
-      
-      return count;
-    } catch (e) {
-      return 0;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return GradientScaffold(
@@ -111,10 +78,14 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
 
             const SizedBox(height: 12),
-            FutureBuilder<int>(
-              future: _getActiveDriversCount(uid),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('drivers')
+                  .where('owner_uid', isEqualTo: uid)
+                  .where('isActive', isEqualTo: true)
+                  .snapshots(),
               builder: (context, snapshot) {
-                final activeDrivers = snapshot.data ?? 0;
+                final activeDrivers = snapshot.data?.docs.length ?? 0;
                 return _StatCard(
                   icon: Icons.person,
                   label: 'Active Drivers',

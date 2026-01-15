@@ -34,9 +34,18 @@ service cloud.firestore {
     
     // Drivers collection
     match /drivers/{driverId} {
-      allow read, write: if request.auth != null;
-      // Simplified: authenticated users can manage drivers
-      // Vehicle ownership validation happens in app layer for performance
+      // Read: users can read their own drivers or admins can read all
+      allow read: if request.auth != null &&
+                  (resource.data.owner_uid == request.auth.uid || isAdmin());
+      
+      // Create: users can create drivers with their own UID as owner_uid
+      // Vehicle ownership is validated in app layer before calling this
+      allow create: if request.auth != null &&
+                   request.resource.data.owner_uid == request.auth.uid;
+      
+      // Update/Delete: users can modify their own drivers or admins can modify any
+      allow update, delete: if request.auth != null &&
+                            (resource.data.owner_uid == request.auth.uid || isAdmin());
     }
     
     // Incidents collection

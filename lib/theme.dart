@@ -140,40 +140,226 @@ class GradientButton extends StatelessWidget {
   }
 }
 
-/// Glass Bottom Navigation
-class GlassBottomNav extends StatelessWidget {
+/// Enhanced Glass Bottom Navigation with bubble effects
+class GlassBottomNav extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   final List<NavigationDestination> destinations;
+  final AnimationController? animationController;
 
   const GlassBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,
     required this.destinations,
+    this.animationController,
+  });
+
+  @override
+  State<GlassBottomNav> createState() => _GlassBottomNavState();
+}
+
+class _GlassBottomNavState extends State<GlassBottomNav>
+    with TickerProviderStateMixin {
+  late List<AnimationController> _bubbleControllers;
+  late List<Animation<double>> _bubbleAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+    // Create bubble animations for each nav item
+    _bubbleControllers = List.generate(
+      widget.destinations.length,
+      (index) => AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 2000),
+      )..repeat(),
+    );
+    _bubbleAnimations = _bubbleControllers.map((controller) {
+      return Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeInOut),
+      );
+    }).toList();
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _bubbleControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withOpacity(0.85),
+                  Colors.white.withOpacity(0.75),
+                ],
+              ),
+              border: Border(
+                top: BorderSide(
+                  color: AppColors.primarySkyBlue.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: List.generate(widget.destinations.length, (index) {
+                    final destination = widget.destinations[index];
+                    final isSelected = index == widget.currentIndex;
+                    
+                    return Expanded(
+                      child: _AnimatedNavItem(
+                        icon: isSelected 
+                            ? (destination.selectedIcon ?? destination.icon)
+                            : destination.icon,
+                        label: destination.label,
+                        isSelected: isSelected,
+                        onTap: () => widget.onTap(index),
+                        animationController: widget.animationController,
+                        bubbleAnimation: _bubbleAnimations[index],
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Animated Navigation Item with bubble effects
+class _AnimatedNavItem extends StatelessWidget {
+  final Widget icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final AnimationController? animationController;
+  final Animation<double>? bubbleAnimation;
+
+  const _AnimatedNavItem({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    this.animationController,
+    this.bubbleAnimation,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(24),
-        topRight: Radius.circular(24),
-      ),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.45),
-            border: Border(top: BorderSide(color: Colors.black.withOpacity(0.06))),
-          ),
-          child: NavigationBar(
-            backgroundColor: Colors.transparent,
-            indicatorColor: AppColors.primarySkyBlue.withOpacity(0.12),
-            selectedIndex: currentIndex,
-            onDestinationSelected: onTap,
-            destinations: destinations,
-          ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        splashColor: AppColors.primarySkyBlue.withOpacity(0.2),
+        highlightColor: AppColors.primarySkyBlue.withOpacity(0.1),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Main content - Clean minimal selection
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: isSelected
+                    ? AppColors.primarySkyBlue.withOpacity(0.1)
+                    : Colors.transparent,
+                boxShadow: isSelected
+                    ? [
+                        // Minimal shadow for subtle elevation
+                        BoxShadow(
+                          color: AppColors.primarySkyBlue.withOpacity(0.15),
+                          blurRadius: 3,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 1),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedScale(
+                    scale: isSelected ? 1.05 : 1.0,
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSelected
+                            ? AppColors.primarySkyBlue.withOpacity(0.1)
+                            : Colors.transparent,
+                      ),
+                      child: IconTheme(
+                        data: IconThemeData(
+                          size: 24,
+                          color: isSelected
+                              ? AppColors.primarySkyBlue
+                              : Colors.grey[600],
+                        ),
+                        child: icon,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    style: TextStyle(
+                      fontSize: isSelected ? 11.5 : 10.5,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? AppColors.primarySkyBlue
+                          : Colors.grey[600],
+                      letterSpacing: isSelected ? 0.3 : 0,
+                    ),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -208,7 +394,7 @@ class GlassCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
-              blurRadius: 18,
+              // blurRadius: 18,
               offset: const Offset(0, 10),
             ),
           ],

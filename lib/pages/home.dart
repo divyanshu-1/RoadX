@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme.dart';
+import '../widgets/carousel_slider.dart';
 import 'vehicle_registration.dart';
 import 'emergency_screen.dart';
 import 'driver_registration.dart';
@@ -16,134 +17,144 @@ class HomePage extends StatelessWidget {
 
     return GradientScaffold(
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 10),
-            // Welcome Section
-            const Text(
-              'Welcome to RoadX',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Manage your vehicles and stay safe on the road',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Feature Cards Grid
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.1,
-              children: [
-                _FeatureCard(
-                  icon: Icons.directions_car,
-                  title: 'Register Vehicle',
-                  description: 'Add your vehicle details',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const VehicleRegistrationPage()),
-                  ),
-                ),
-                _FeatureCard(
-                  icon: Icons.warning,
-                  title: 'Report Incident',
-                  description: 'Report emergencies',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const EmergencyScreen()),
-                  ),
-                ),
-                _FeatureCard(
-                  icon: Icons.history,
-                  title: 'Incident History',
-                  description: 'View past reports',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const IncidentHistoryPage(),
+            // Carousel Slider
+            const RoadXCarousel(),
+            
+            // Dashboard Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  Text(
+                    'Quick Actions',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
-                ),
-                _FeatureCard(
-                  icon: Icons.person_add,
-                  title: 'Authorized Drivers',
-                  description: 'Manage drivers',
-                  onTap: () => _showVehicleSelector(context, uid, (vehicleId) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DriverRegistrationPage(vehicleId: vehicleId),
-                      ),
-                    );
-                  }),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 16),
 
-            const SizedBox(height: 24),
+                  // Feature Cards Grid
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.1,
+                    children: [
+                      _FeatureCard(
+                        icon: Icons.directions_car,
+                        title: 'Register Vehicle',
+                        description: 'Add your vehicle details',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const VehicleRegistrationPage()),
+                        ),
+                      ),
+                      _FeatureCard(
+                        icon: Icons.warning,
+                        title: 'Report Incident',
+                        description: 'Report emergencies',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const EmergencyScreen()),
+                        ),
+                      ),
+                      _FeatureCard(
+                        icon: Icons.history,
+                        title: 'Incident History',
+                        description: 'View past reports',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const IncidentHistoryPage(),
+                          ),
+                        ),
+                      ),
+                      _FeatureCard(
+                        icon: Icons.person_add,
+                        title: 'Authorized Drivers',
+                        description: 'Manage drivers',
+                        onTap: () => _showVehicleSelector(context, uid, (vehicleId) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DriverRegistrationPage(vehicleId: vehicleId),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
 
             // Quick Stats Section
-            const Text(
-              'Quick Stats',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Quick Stats',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('vehicles')
+                        .where('owner_uid', isEqualTo: uid)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      final vehicleCount = snapshot.data?.docs.length ?? 0;
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              icon: Icons.directions_car,
+                              label: 'Vehicles',
+                              value: vehicleCount.toString(),
+                              color: AppColors.primarySkyBlue,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: StreamBuilder<QuerySnapshot>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('incidents')
+                                  .where('userId', isEqualTo: uid)
+                                  .snapshots(),
+                              builder: (context, incidentSnapshot) {
+                                final incidentCount = incidentSnapshot.data?.docs.length ?? 0;
+                                return _StatCard(
+                                  icon: Icons.warning,
+                                  label: 'Incidents',
+                                  value: incidentCount.toString(),
+                                  color: AppColors.primarySkyBlue,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('vehicles')
-                  .where('owner_uid', isEqualTo: uid)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                final vehicleCount = snapshot.data?.docs.length ?? 0;
-                return Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.directions_car,
-                        label: 'Vehicles',
-                        value: vehicleCount.toString(),
-                        color: AppColors.primarySkyBlue,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('incidents')
-                            .where('userId', isEqualTo: uid)
-                            .snapshots(),
-                        builder: (context, incidentSnapshot) {
-                          final incidentCount = incidentSnapshot.data?.docs.length ?? 0;
-                          return _StatCard(
-                            icon: Icons.warning,
-                            label: 'Incidents',
-                            value: incidentCount.toString(),
-                            color: AppColors.primarySkyBlue,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              },
             ),
           ],
         ),

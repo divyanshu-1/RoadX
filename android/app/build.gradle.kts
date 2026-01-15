@@ -38,7 +38,7 @@ android {
         applicationId = "com.example.roadx"
 
         // 🔹 Make sure minSdk is at least 23 for Firebase
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

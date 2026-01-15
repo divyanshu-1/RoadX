@@ -24,7 +24,6 @@ class IncidentHistoryPage extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('incidents')
             .where('userId', isEqualTo: uid)
-            .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -44,9 +43,24 @@ class IncidentHistoryPage extends StatelessWidget {
             );
           }
 
-          final docs = snapshot.data?.docs ?? [];
+          final allDocs = snapshot.data?.docs ?? [];
 
-          if (docs.isEmpty) {
+          // Sort by timestamp in memory (descending - newest first)
+          final sortedDocs = List<QueryDocumentSnapshot>.from(allDocs);
+          sortedDocs.sort((a, b) {
+            final aTimestamp = a.data() as Map<String, dynamic>;
+            final bTimestamp = b.data() as Map<String, dynamic>;
+            final aTime = aTimestamp['timestamp'] as Timestamp?;
+            final bTime = bTimestamp['timestamp'] as Timestamp?;
+            
+            if (aTime == null && bTime == null) return 0;
+            if (aTime == null) return 1;
+            if (bTime == null) return -1;
+            
+            return bTime.compareTo(aTime); // Descending order
+          });
+
+          if (sortedDocs.isEmpty) {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
@@ -61,9 +75,9 @@ class IncidentHistoryPage extends StatelessWidget {
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
+            itemCount: sortedDocs.length,
             itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
+              final data = sortedDocs[index].data() as Map<String, dynamic>;
               final type = (data['type'] as String?) ?? 'unknown';
               final timestamp = data['timestamp'] as Timestamp?;
               final status = (data['status'] as String?) ?? 'reported';

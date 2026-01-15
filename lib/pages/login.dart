@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme.dart';
 import '../screens.dart';
+import '../utils/custom_snackbar.dart';
 import 'signup.dart';
 
 class LoginPage extends StatefulWidget {
@@ -36,8 +37,9 @@ class _LoginPageState extends State<LoginPage> {
       if (asAdmin) {
         // ✅ Admin login button pressed - only allow if user is already marked as admin
         if (!userDoc.exists || !isAdmin) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('You are not authorized to access the admin panel.')),
+          CustomSnackBar.error(
+            context,
+            'You are not authorized to access the admin panel.',
           );
           await _auth.signOut();
           return;
@@ -63,8 +65,7 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         message = e.message ?? 'Login failed';
       }
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      CustomSnackBar.error(context, message);
     } finally {
       setState(() => isLoading = false);
     }

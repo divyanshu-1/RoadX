@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme.dart';
 import '../screens.dart';
+import '../utils/custom_snackbar.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -43,9 +44,7 @@ class _ProfilePageState extends State<ProfilePage> {
       // Can be updated with package_info_plus if needed
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading profile: $e')),
-        );
+        CustomSnackBar.error(context, 'Error loading profile: $e');
       }
     } finally {
       if (mounted) {
@@ -66,9 +65,7 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Logout failed: $e')),
-        );
+        CustomSnackBar.error(context, 'Logout failed: $e');
       }
     } finally {
       if (mounted) {
@@ -307,8 +304,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     title: const Text('Terms of Service'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Terms of Service coming soon')),
+                      CustomSnackBar.info(
+                        context,
+                        'Terms of Service coming soon',
                       );
                     },
                   ),
@@ -318,8 +316,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     title: const Text('Privacy Policy'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Privacy Policy coming soon')),
+                      CustomSnackBar.info(
+                        context,
+                        'Privacy Policy coming soon',
                       );
                     },
                   ),

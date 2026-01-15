@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../utils/custom_snackbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -28,6 +29,15 @@ class _HistoryPayBody extends StatelessWidget {
     ]);
   }
 }
+
+
+
+
+
+
+
+
+
 
 class _HistoryTab extends StatelessWidget {
   @override
@@ -77,7 +87,10 @@ class _HistoryTab extends StatelessWidget {
                         icon: Icons.payment,
                         onPressed: () async {
                           await docs[i].reference.set({'status': 'Paid'}, SetOptions(merge: true));
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Challan of ₹$amount marked paid')));
+                          CustomSnackBar.success(
+                            context,
+                            'Challan of ₹$amount marked paid',
+                          );
                         },
                         child: const Text('Pay Challan'),
                       ),

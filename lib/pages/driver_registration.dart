@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../utils/custom_snackbar.dart';
 
 class DriverRegistrationPage extends StatefulWidget {
   final String vehicleId;
@@ -25,17 +26,46 @@ class _DriverRegistrationPageState extends State<DriverRegistrationPage> {
         phoneController.text.trim().isEmpty ||
         dlNumberController.text.trim().isEmpty ||
         dlExpiry == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      CustomSnackBar.error(context, 'Please fill all fields');
       return;
     }
 
     setState(() => isSubmitting = true);
 
     try {
+      // Get current user
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        CustomSnackBar.error(context, 'User not authenticated');
+        setState(() => isSubmitting = false);
+        return;
+      }
+
+      // Verify vehicle ownership before registering driver
+      final vehicleDoc = await FirebaseFirestore.instance
+          .collection('vehicles')
+          .doc(widget.vehicleId)
+          .get();
+
+      if (!vehicleDoc.exists) {
+        CustomSnackBar.error(context, 'Vehicle not found');
+        setState(() => isSubmitting = false);
+        return;
+      }
+
+      final vehicleData = vehicleDoc.data();
+      final ownerUid = vehicleData?['owner_uid'] as String?;
+
+      if (ownerUid != user.uid) {
+        CustomSnackBar.error(context, 'You do not own this vehicle');
+        setState(() => isSubmitting = false);
+        return;
+      }
+
+      // Register driver with owner_uid for efficient querying
       await FirebaseFirestore.instance.collection('drivers').add({
         'vehicleId': widget.vehicleId,
+        'owner_uid': user.uid, // Add owner_uid for direct user queries
         'name': nameController.text.trim(),
         'phone': phoneController.text.trim(),
         'dl_number': dlNumberController.text.trim(),
@@ -44,9 +74,7 @@ class _DriverRegistrationPageState extends State<DriverRegistrationPage> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Driver registered successfully')),
-      );
+      CustomSnackBar.success(context, 'Driver registered successfully');
 
       nameController.clear();
       phoneController.clear();
@@ -55,10 +83,11 @@ class _DriverRegistrationPageState extends State<DriverRegistrationPage> {
         dlExpiry = null;
         isActive = true;
       });
+
+      // Navigate back after successful registration
+      Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to register driver: $e')),
-      );
+      CustomSnackBar.error(context, 'Failed to register driver: $e');
     } finally {
       setState(() => isSubmitting = false);
     }

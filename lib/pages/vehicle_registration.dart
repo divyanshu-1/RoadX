@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../utils/custom_snackbar.dart';
 
 class VehicleRegistrationPage extends StatefulWidget {
   const VehicleRegistrationPage({super.key});
@@ -57,15 +58,14 @@ class _VehicleRegistrationPageState extends State<VehicleRegistrationPage> {
         chassisNoController.text.trim().isEmpty ||
         vehicleNoController.text.trim().isEmpty ||
         selectedModel == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      CustomSnackBar.error(context, 'Please fill all fields');
       return;
     }
 
     if (!_isValidNumberPlate(vehicleNoController.text.trim())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter valid number plate format (e.g., MH12AB1234)')),
+      CustomSnackBar.error(
+        context,
+        'Please enter valid number plate format (e.g., MH12AB1234)',
       );
       return;
     }
@@ -87,18 +87,14 @@ class _VehicleRegistrationPageState extends State<VehicleRegistrationPage> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vehicle registered successfully')),
-      );
+      CustomSnackBar.success(context, 'Vehicle registered successfully');
 
       engineNoController.clear();
       chassisNoController.clear();
       vehicleNoController.clear();
       setState(() => selectedModel = null);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to register vehicle: $e')),
-      );
+      CustomSnackBar.error(context, 'Failed to register vehicle: $e');
     } finally {
       setState(() => isSubmitting = false);
     }

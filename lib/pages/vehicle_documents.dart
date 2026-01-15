@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../theme.dart';
 import '../widgets.dart';
+import '../utils/custom_snackbar.dart';
 
 class VehicleDocumentsPage extends StatefulWidget {
   final String vehicleId;
@@ -165,9 +166,7 @@ class _VehicleDocumentsPageState extends State<VehicleDocumentsPage> {
         onFileSelected(File(image.path));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
-      );
+      CustomSnackBar.error(context, 'Error picking image: $e');
     }
   }
 
@@ -185,8 +184,9 @@ class _VehicleDocumentsPageState extends State<VehicleDocumentsPage> {
 
   Future<void> _uploadDocument(String docType, File? file, DateTime? expiry) async {
     if (file == null || expiry == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select file and expiry date')),
+      CustomSnackBar.error(
+        context,
+        'Please select file and expiry date',
       );
       return;
     }
@@ -210,8 +210,9 @@ class _VehicleDocumentsPageState extends State<VehicleDocumentsPage> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$docType document uploaded successfully')),
+      CustomSnackBar.success(
+        context,
+        '$docType document uploaded successfully',
       );
 
       // Clear the file and expiry after successful upload
@@ -232,8 +233,9 @@ class _VehicleDocumentsPageState extends State<VehicleDocumentsPage> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload document: $e')),
+      CustomSnackBar.error(
+        context,
+        'Failed to upload document: $e',
       );
     } finally {
       setState(() => isUploading = false);

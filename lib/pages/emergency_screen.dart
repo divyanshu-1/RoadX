@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../utils/custom_snackbar.dart';
 
 class EmergencyScreen extends StatefulWidget {
   const EmergencyScreen({Key? key}) : super(key: key);
@@ -26,16 +27,12 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   Future<void> _submitIncident() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not logged in!")),
-      );
+      CustomSnackBar.error(context, 'User not logged in!');
       return;
     }
 
     if (_vehicleNoController.text.trim().isEmpty || selectedType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all fields")),
-      );
+      CustomSnackBar.error(context, 'Please fill all fields');
       return;
     }
 
@@ -65,16 +62,12 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
         'location': 'N/A',
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Incident reported successfully!")),
-      );
+      CustomSnackBar.success(context, 'Incident reported successfully!');
 
       _vehicleNoController.clear();
       setState(() => selectedType = null);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      CustomSnackBar.error(context, 'Error: $e');
     }
 
     setState(() => _isLoading = false);

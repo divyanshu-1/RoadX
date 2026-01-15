@@ -22,13 +22,15 @@ class UserShell extends StatefulWidget {
   State<UserShell> createState() => _UserShellState();
 }
 
-class _UserShellState extends State<UserShell> {
+class _UserShellState extends State<UserShell> with TickerProviderStateMixin {
   int index = 0;
+  late final PageController _pageController;
   late final List<Widget> pages;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: 0);
     // Use const pages where possible so state inside each tab is preserved
     pages = const [
       HomePage(),
@@ -39,10 +41,34 @@ class _UserShellState extends State<UserShell> {
   }
 
   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onNavTap(int newIndex) {
+    if (newIndex != index) {
+      setState(() => index = newIndex);
+      _pageController.animateToPage(
+        newIndex,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GradientScaffold(
       appBar: AppBar(
-        title: const Text('RoadX'),
+        title: const Text(
+          'Welcome to RoadX',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -51,15 +77,18 @@ class _UserShellState extends State<UserShell> {
         ),
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
-      // Use IndexedStack so tab state is preserved when switching
-      body: IndexedStack(
-        index: index,
+      // Use PageView with bubble transition effect
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (newIndex) => setState(() => index = newIndex),
         children: pages,
+        physics: const BouncingScrollPhysics(),
       ),
       bottomNavigationBar: SemiCircularBottomNav(
         currentIndex: index,
-        onTap: (i) => setState(() => index = i),
+        onTap: _onNavTap,
       ),
     );
   }
@@ -83,7 +112,7 @@ class EmergencyPage extends StatelessWidget {
   }
 }
 
-// Semi-circular bottom navigation with center button
+// Enhanced bottom navigation with smooth animations
 class SemiCircularBottomNav extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -100,197 +129,63 @@ class SemiCircularBottomNav extends StatefulWidget {
 
 class _SemiCircularBottomNavState extends State<SemiCircularBottomNav>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
   }
 
   @override
+  void didUpdateWidget(SemiCircularBottomNav oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      _animationController.forward().then((_) {
+        _animationController.reverse();
+      });
+    }
+  }
+
+  @override
   void dispose() {
-    _controller.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Semi-circular notch
-          Positioned(
-            top: -20,
-            left: MediaQuery.of(context).size.width / 2 - 30,
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Navigation items
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Flexible(
-                  flex: 1,
-                  child: _NavItem(
-                    icon: Icons.home_outlined,
-                    selectedIcon: Icons.home,
-                    label: 'Home',
-                    index: 0,
-                    currentIndex: widget.currentIndex,
-                    onTap: () => widget.onTap(0),
-                  ),
-                ),
-                Flexible(
-                  flex: 1,
-                  child: _NavItem(
-                    icon: Icons.dashboard_outlined,
-                    selectedIcon: Icons.dashboard,
-                    label: 'Dashboard',
-                    index: 1,
-                    currentIndex: widget.currentIndex,
-                    onTap: () => widget.onTap(1),
-                  ),
-                ),
-                // Center Emergency button - fixed width
-                SizedBox(
-                  width: 60,
-                  child: GestureDetector(
-                    onTapDown: (_) {
-                      _controller.forward();
-                    },
-                    onTapUp: (_) {
-                      _controller.reverse();
-                      widget.onTap(2);
-                    },
-                    onTapCancel: () => _controller.reverse(),
-                    child: ScaleTransition(
-                      scale: Tween<double>(begin: 1.0, end: 0.9).animate(
-                        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-                      ),
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          gradient: AppGradients.button,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primarySkyBlue.withOpacity(0.4),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.warning,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Flexible(
-                  flex: 1,
-                  child: _NavItem(
-                    icon: Icons.person_outline,
-                    selectedIcon: Icons.person,
-                    label: 'Profile',
-                    index: 3,
-                    currentIndex: widget.currentIndex,
-                    onTap: () => widget.onTap(3),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData selectedIcon;
-  final String label;
-  final int index;
-  final int currentIndex;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.icon,
-    required this.selectedIcon,
-    required this.label,
-    required this.index,
-    required this.currentIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = index == currentIndex;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isSelected ? selectedIcon : icon,
-                color: isSelected ? AppColors.primarySkyBlue : Colors.grey,
-                size: 24,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isSelected ? AppColors.primarySkyBlue : Colors.grey,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+    return GlassBottomNav(
+      currentIndex: widget.currentIndex,
+      onTap: widget.onTap,
+      animationController: _animationController,
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
         ),
-      ),
+        NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          selectedIcon: Icon(Icons.dashboard),
+          label: 'Dashboard',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.warning_outlined),
+          selectedIcon: Icon(Icons.warning),
+          label: 'Incident',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ],
     );
   }
 }
+
 
