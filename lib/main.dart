@@ -1,11 +1,19 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'theme.dart';
 import 'screens.dart';
-import 'pages/login.dart';
+import 'firebase_options.dart';
+import 'auth/owner_auth_provider.dart';
+import 'auth/owner_auth_gate.dart';
+import 'pages/login_selection_screen.dart';
+import 'pages/user_login.dart';
+import 'pages/admin_login.dart';
 import 'pages/admin_dashboard.dart';
 import 'pages/emergency_screen.dart';
-import 'firebase_options.dart';
+import 'rto/rto_login_screen.dart';
+import 'owner/owner_register_screen.dart';
+import 'services/firebase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,9 +21,10 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print('✅ Firebase initialized successfully');
+    await FirebaseService.initialize();
+    debugPrint('Firebase initialized successfully');
   } catch (e) {
-    print('❌ Firebase initialization error: $e');
+    debugPrint('Firebase initialization error: $e');
   }
   runApp(const MyApp());
 }
@@ -25,25 +34,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'RoadX',
-      theme: buildAppTheme(),
-      // start from login screen
-      initialRoute: AppRoutes.login,
-      routes: {
-        // Login page
-        AppRoutes.login: (context) => const LoginPage(),
-
-        // User interface after login
-        AppRoutes.userShell: (context) => const UserShell(),
-
-        // Admin dashboard (guarded)
-        AppRoutes.admin: (context) => const AdminPanelGuarded(),
-
-        // Emergency reporting page
-        AppRoutes.emergency: (context) => const EmergencyScreen(),
-      },
+    return ChangeNotifierProvider(
+      create: (_) => OwnerAuthProvider()..initSession(),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'RoadX',
+        theme: buildAppTheme(),
+        initialRoute: AppRoutes.login,
+        routes: {
+          AppRoutes.login: (context) => const LoginSelectionScreen(),
+          AppRoutes.userLogin: (context) => const UserLoginPage(),
+          AppRoutes.adminLogin: (context) => const AdminLoginPage(),
+          AppRoutes.carOwnerLogin: (context) => const OwnerAuthGate(),
+          AppRoutes.ownerRegister: (context) => const OwnerRegisterScreen(),
+          AppRoutes.rtoLogin: (context) => const RtoLoginScreen(),
+          AppRoutes.userShell: (context) => const UserShell(),
+          AppRoutes.admin: (context) => const AdminPanelGuarded(),
+          AppRoutes.emergency: (context) => const EmergencyScreen(),
+        },
+      ),
     );
   }
 }
+

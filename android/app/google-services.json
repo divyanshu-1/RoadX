@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "726016739872",
+    "firebase_url": "https://mainroadx-default-rtdb.firebaseio.com",
     "project_id": "mainroadx",
     "storage_bucket": "mainroadx.firebasestorage.app"
   },

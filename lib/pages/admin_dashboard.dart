@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../admin/admin_analytics_dashboard.dart';
+import '../admin/providers/admin_dashboard_provider.dart';
+import '../admin/admin_licenses_view.dart';
+import '../admin/widgets/admin_theme.dart';
 import '../theme.dart';
 import '../screens.dart';
 
@@ -49,7 +55,10 @@ class AdminPanelGuarded extends StatelessWidget {
           );
         }
 
-        return const AdminPanel();
+        return ChangeNotifierProvider(
+          create: (_) => AdminDashboardProvider()..startListening(),
+          child: const AdminPanel(),
+        );
       },
     );
   }
@@ -60,22 +69,38 @@ class AdminPanel extends StatefulWidget {
   @override
   State<AdminPanel> createState() => _AdminPanelState();
 }
-
+                                                          
 class _AdminPanelState extends State<AdminPanel> {
   int currentIndex = 0;
   late final PageController _pageController;
   late final List<Widget> pages;
 
+  static const _titles = [
+    'Analytics',
+    'Users',
+    'Vehicles',
+    'Incidents',
+    'Licenses',
+  ];
+
+  static const _subtitles = [
+    'Live challan insights',
+    'Registered platform users',
+    'Fleet overview',
+    'Reported incidents',
+    'Driving license records',
+  ];
+
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: 0);
-    // Initialize pages
     pages = [
-      const _DashboardOverview(),
+      const AdminAnalyticsDashboard(),
       const _UsersView(),
       const _VehiclesView(),
       const _IncidentsView(),
+      const AdminLicensesView(),
     ];
   }
 
@@ -87,49 +112,83 @@ class _AdminPanelState extends State<AdminPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return GradientScaffold(
-      appBar: AppBar(
-        title: const Text('RoadX Admin'),
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: AppGradients.button,
-          ),
-        ),
+    return Container(
+      decoration: const BoxDecoration(gradient: AdminTheme.pageGradient),
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (mounted) {
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF0F172A).withValues(alpha: 0.92),
+          foregroundColor: AdminTheme.textPrimary,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'RoadX Admin',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AdminTheme.textPrimary,
+                ),
+              ),
+              Text(
+                _subtitles[currentIndex],
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: AdminTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Chip(
+                label: Text(
+                  _titles[currentIndex],
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AdminTheme.accent,
+                  ),
+                ),
+                backgroundColor: AdminTheme.accent.withValues(alpha: 0.15),
+                side: BorderSide(
+                  color: AdminTheme.accent.withValues(alpha: 0.35),
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Logout',
+              icon: const Icon(Icons.logout_rounded, color: AdminTheme.textPrimary),
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                if (!context.mounted) return;
                 Navigator.of(context).pushNamedAndRemoveUntil(
                   AppRoutes.login,
                   (route) => false,
                 );
-              }
-            },
-          ),
-        ],
-      ),
-      // Use PageView for smooth transitions
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (newIndex) => setState(() => currentIndex = newIndex),
-        children: pages,
-        physics: const BouncingScrollPhysics(),
-      ),
-      bottomNavigationBar: AdminBottomNav(
-        currentIndex: currentIndex,
-        onTap: (i) {
-          setState(() => currentIndex = i);
-          _pageController.animateToPage(
-            i,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-          );
-        },
+              },
+            ),
+          ],
+        ),
+        body: PageView(
+          controller: _pageController,
+          onPageChanged: (newIndex) => setState(() => currentIndex = newIndex),
+          children: pages,
+          physics: const BouncingScrollPhysics(),
+        ),
+        bottomNavigationBar: AdminGlassNavigationBar(
+          selectedIndex: currentIndex,
+          onDestinationSelected: (i) {
+            setState(() => currentIndex = i);
+            _pageController.animateToPage(
+              i,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+            );
+          },
+        ),
       ),
     );
   }
@@ -187,9 +246,9 @@ class _AdminBottomNavState extends State<AdminBottomNav>
       animationController: _animationController,
       destinations: const [
         NavigationDestination(
-          icon: Icon(Icons.dashboard_outlined),
-          selectedIcon: Icon(Icons.dashboard),
-          label: 'Dashboard',
+          icon: Icon(Icons.analytics_outlined),
+          selectedIcon: Icon(Icons.analytics),
+          label: 'Analytics',
         ),
         NavigationDestination(
           icon: Icon(Icons.people_outline),
@@ -206,126 +265,17 @@ class _AdminBottomNavState extends State<AdminBottomNav>
           selectedIcon: Icon(Icons.warning),
           label: 'Incidents',
         ),
+        NavigationDestination(
+          icon: Icon(Icons.badge_outlined),
+          selectedIcon: Icon(Icons.badge),
+          label: 'Licenses',
+        ),
       ],
     );
   }
 }
 
-// Dashboard Overview
-class _DashboardOverview extends StatelessWidget {
-  const _DashboardOverview();
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _loadDashboardData(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-
-        final data = snapshot.data ?? {};
-        final totalUsers = data['totalUsers'] ?? 0;
-        final totalVehicles = data['totalVehicles'] ?? 0;
-        final totalIncidents = data['totalIncidents'] ?? 0;
-
-        return ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            const SizedBox(height: 8),
-            const Text(
-              'Dashboard Overview',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _StatCard(
-                  title: 'Total Users',
-                  value: totalUsers.toString(),
-                  icon: Icons.people,
-                  color: AppColors.primarySkyBlue,
-                ),
-                _StatCard(
-                  title: 'Total Vehicles',
-                  value: totalVehicles.toString(),
-                  icon: Icons.directions_car,
-                  color: AppColors.accentLightBlue,
-                ),
-                _StatCard(
-                  title: 'Total Incidents',
-                  value: totalIncidents.toString(),
-                  icon: Icons.warning,
-                  color: Colors.orange,
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<Map<String, dynamic>> _loadDashboardData() async {
-    try {
-      final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
-      final vehiclesSnapshot = await FirebaseFirestore.instance.collection('vehicles').get();
-      final incidentsSnapshot = await FirebaseFirestore.instance.collection('incidents').get();
-
-      return {
-        'totalUsers': usersSnapshot.docs.length,
-        'totalVehicles': vehiclesSnapshot.docs.length,
-        'totalIncidents': incidentsSnapshot.docs.length,
-      };
-    } catch (e) {
-      throw Exception('Failed to load dashboard data: $e');
-    }
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 32, color: color),
-          const SizedBox(height: 12),
-          Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color)),
-        ],
-      ),
-    );
-  }
-}
-
-// Reusable Admin Search Bar Widget
+// Reusable Admin Search Bar Widget — glass style
 class _AdminSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
@@ -337,30 +287,20 @@ class _AdminSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          hintText: hintText,
-          prefixIcon: const Icon(Icons.search, color: AppColors.primarySkyBlue),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-      ),
-    );
+    return AdminGlassSearchBar(controller: controller, hintText: hintText);
   }
+}
+
+Widget _adminAvatarIcon(IconData icon, {Color? color}) {
+  return Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: AdminTheme.accent.withValues(alpha: 0.15),
+      shape: BoxShape.circle,
+      border: Border.all(color: AdminTheme.accent.withValues(alpha: 0.3)),
+    ),
+    child: Icon(icon, color: color ?? AdminTheme.accent, size: 22),
+  );
 }
 
 // Users View
@@ -435,14 +375,7 @@ class _UsersViewState extends State<_UsersView> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Users',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-        ),
+        const AdminSectionHeader(title: 'Users'),
         _AdminSearchBar(
           controller: _searchController,
           hintText: 'Search by username or email...',
@@ -452,23 +385,23 @@ class _UsersViewState extends State<_UsersView> {
             stream: FirebaseFirestore.instance.collection('users').snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting || _isLoadingVehicles) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: CircularProgressIndicator(color: AdminTheme.accent),
+                );
               }
 
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return AdminEmptyState(message: 'Error: ${snapshot.error}');
               }
 
               final allDocs = snapshot.data?.docs ?? [];
               final filteredDocs = _filterUsers(allDocs, _searchController.text);
 
               if (filteredDocs.isEmpty) {
-                return Center(
-                  child: Text(
-                    _searchController.text.isEmpty
-                        ? 'No users found'
-                        : 'No users match your search',
-                  ),
+                return AdminEmptyState(
+                  message: _searchController.text.isEmpty
+                      ? 'No users found'
+                      : 'No users match your search',
                 );
               }
 
@@ -484,29 +417,13 @@ class _UsersViewState extends State<_UsersView> {
                   final email = userData['email'] as String? ?? 'N/A';
                   final vehicleModel = _userVehicleModels[userId];
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: const Icon(Icons.person, color: AppColors.primarySkyBlue),
-                      title: Text(
-                        username,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(email),
-                          if (vehicleModel != null)
-                            Text(
-                              'Vehicle: $vehicleModel',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                  return AdminGlassListCard(
+                    leading: _adminAvatarIcon(Icons.person_rounded),
+                    title: username,
+                    subtitles: [
+                      email,
+                      if (vehicleModel != null) 'Vehicle: $vehicleModel',
+                    ],
                   );
                 },
               );
@@ -556,14 +473,7 @@ class _VehiclesViewState extends State<_VehiclesView> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Vehicles',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-        ),
+        const AdminSectionHeader(title: 'Vehicles'),
         _AdminSearchBar(
           controller: _searchController,
           hintText: 'Search by model or vehicle number...',
@@ -573,27 +483,27 @@ class _VehiclesViewState extends State<_VehiclesView> {
             future: _loadAllVehicles(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: CircularProgressIndicator(color: AdminTheme.accent),
+                );
               }
 
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return AdminEmptyState(message: 'Error: ${snapshot.error}');
               }
 
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('No vehicles found'));
+                return const AdminEmptyState(message: 'No vehicles found');
               }
 
               final allVehicles = snapshot.data!;
               final filteredVehicles = _filterVehicles(allVehicles, _searchController.text);
 
               if (filteredVehicles.isEmpty) {
-                return Center(
-                  child: Text(
-                    _searchController.text.isEmpty
-                        ? 'No vehicles found'
-                        : 'No vehicles match your search',
-                  ),
+                return AdminEmptyState(
+                  message: _searchController.text.isEmpty
+                      ? 'No vehicles found'
+                      : 'No vehicles match your search',
                 );
               }
 
@@ -603,22 +513,13 @@ class _VehiclesViewState extends State<_VehiclesView> {
                 itemBuilder: (context, index) {
                   final vehicle = filteredVehicles[index];
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: const Icon(Icons.directions_car, color: AppColors.primarySkyBlue),
-                      title: Text(
-                        vehicle['vehicle_no'] ?? 'N/A',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Model: ${vehicle['model'] ?? 'N/A'}'),
-                          Text('Owner: ${vehicle['owner_name'] ?? 'N/A'}'),
-                        ],
-                      ),
-                    ),
+                  return AdminGlassListCard(
+                    leading: _adminAvatarIcon(Icons.directions_car_rounded),
+                    title: vehicle['vehicle_no'] ?? 'N/A',
+                    subtitles: [
+                      'Model: ${vehicle['model'] ?? 'N/A'}',
+                      'Owner: ${vehicle['owner_name'] ?? 'N/A'}',
+                    ],
                   );
                 },
               );
@@ -715,14 +616,7 @@ class _IncidentsViewState extends State<_IncidentsView> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Incidents',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-        ),
+        const AdminSectionHeader(title: 'Incidents'),
         _AdminSearchBar(
           controller: _searchController,
           hintText: 'Search by type, owner, or vehicle...',
@@ -735,23 +629,23 @@ class _IncidentsViewState extends State<_IncidentsView> {
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: CircularProgressIndicator(color: AdminTheme.accent),
+                );
               }
 
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return AdminEmptyState(message: 'Error: ${snapshot.error}');
               }
 
               final allDocs = snapshot.data?.docs ?? [];
               final filteredDocs = _filterIncidents(allDocs, _searchController.text);
 
               if (filteredDocs.isEmpty) {
-                return Center(
-                  child: Text(
-                    _searchController.text.isEmpty
-                        ? 'No incidents reported'
-                        : 'No incidents match your search',
-                  ),
+                return AdminEmptyState(
+                  message: _searchController.text.isEmpty
+                      ? 'No incidents reported'
+                      : 'No incidents match your search',
                 );
               }
 
@@ -769,36 +663,17 @@ class _IncidentsViewState extends State<_IncidentsView> {
                   final status = incidentData['status'] as String? ?? 'reported';
                   final location = incidentData['location'] as String? ?? 'N/A';
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppColors.primarySkyBlue,
-                        child: Icon(
-                          _getTypeIcon(type),
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      title: Text(
-                        _getTypeDisplay(type),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Vehicle: $vehicleNo'),
-                          Text('Owner: $ownerName'),
-                          Text('Location: $location'),
-                          Text('Status: ${_getStatusDisplay(status)}'),
-                          if (timestamp != null)
-                            Text(
-                              'Time: ${timestamp.toDate().toString().substring(0, 19)}',
-                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                            ),
-                        ],
-                      ),
-                    ),
+                  return AdminGlassListCard(
+                    leading: _adminAvatarIcon(_getTypeIcon(type)),
+                    title: _getTypeDisplay(type),
+                    subtitles: [
+                      'Vehicle: $vehicleNo',
+                      'Owner: $ownerName',
+                      'Location: $location',
+                      'Status: ${_getStatusDisplay(status)}',
+                      if (timestamp != null)
+                        'Time: ${timestamp.toDate().toString().substring(0, 19)}',
+                    ],
                   );
                 },
               );

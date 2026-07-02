@@ -10,7 +10,6 @@ class CustomSnackBar {
     SnackBarType type = SnackBarType.info,
   }) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     Color background;
     Color textColor = Colors.white;
@@ -23,7 +22,6 @@ class CustomSnackBar {
         background = theme.colorScheme.error;
         break;
       case SnackBarType.info:
-      default:
         background = AppColors.primarySkyBlue;
         break;
     }
@@ -31,17 +29,12 @@ class CustomSnackBar {
     final snackBar = SnackBar(
       content: Text(
         message,
-        style: TextStyle(
-          color: textColor,
-          fontWeight: FontWeight.w500,
-        ),
+        style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
       ),
       backgroundColor: background,
       behavior: SnackBarBehavior.floating,
       elevation: 6,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
 
@@ -62,4 +55,3 @@ class CustomSnackBar {
     show(context, message: message, type: SnackBarType.info);
   }
 }
-

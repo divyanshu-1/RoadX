@@ -1,0 +1,53 @@
+{
+  "rules": {
+    "owners": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid",
+        "challans": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        },
+        "vehicles": {
+          ".read": "auth != null",
+          "$vehicleId": {
+            ".write": "auth != null && auth.uid == $uid",
+            "authorizedDrivers": {
+              ".read": "auth != null",
+              ".write": "auth != null && auth.uid == $uid"
+            },
+            "challans": {
+              ".read": "auth != null",
+              ".write": "auth != null"
+            }
+          }
+        },
+        "access_logs": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": "auth != null && auth.uid == $uid"
+        }
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+    "vehicles": {
+      ".read": "auth != null",
+      "$vehicleNo": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "challans": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      }
+    },
+    "challans": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}

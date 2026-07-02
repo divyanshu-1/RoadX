@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -59,7 +58,11 @@ class _VehicleDocumentsPageState extends State<VehicleDocumentsPage> {
                     insuranceExpiry,
                     (file) => setState(() => insuranceFile = file),
                     (date) => setState(() => insuranceExpiry = date),
-                    () => _uploadDocument('insurance', insuranceFile, insuranceExpiry),
+                    () => _uploadDocument(
+                      'insurance',
+                      insuranceFile,
+                      insuranceExpiry,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   _buildDocumentSection(
@@ -115,7 +118,9 @@ class _VehicleDocumentsPageState extends State<VehicleDocumentsPage> {
                   child: ElevatedButton.icon(
                     onPressed: () => _pickImage(docType, onFileSelected),
                     icon: const Icon(Icons.upload_file),
-                    label: Text(file == null ? 'Upload $docType' : 'Change File'),
+                    label: Text(
+                      file == null ? 'Upload $docType' : 'Change File',
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primarySkyBlue,
                       foregroundColor: Colors.white,
@@ -159,7 +164,10 @@ class _VehicleDocumentsPageState extends State<VehicleDocumentsPage> {
     );
   }
 
-  Future<void> _pickImage(String docType, Function(File?) onFileSelected) async {
+  Future<void> _pickImage(
+    String docType,
+    Function(File?) onFileSelected,
+  ) async {
     try {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
       if (image != null) {
@@ -170,7 +178,10 @@ class _VehicleDocumentsPageState extends State<VehicleDocumentsPage> {
     }
   }
 
-  Future<void> _selectDate(BuildContext context, Function(DateTime?) onDateSelected) async {
+  Future<void> _selectDate(
+    BuildContext context,
+    Function(DateTime?) onDateSelected,
+  ) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -182,12 +193,13 @@ class _VehicleDocumentsPageState extends State<VehicleDocumentsPage> {
     }
   }
 
-  Future<void> _uploadDocument(String docType, File? file, DateTime? expiry) async {
+  Future<void> _uploadDocument(
+    String docType,
+    File? file,
+    DateTime? expiry,
+  ) async {
     if (file == null || expiry == null) {
-      CustomSnackBar.error(
-        context,
-        'Please select file and expiry date',
-      );
+      CustomSnackBar.error(context, 'Please select file and expiry date');
       return;
     }
 
@@ -233,10 +245,7 @@ class _VehicleDocumentsPageState extends State<VehicleDocumentsPage> {
         });
       }
     } catch (e) {
-      CustomSnackBar.error(
-        context,
-        'Failed to upload document: $e',
-      );
+      CustomSnackBar.error(context, 'Failed to upload document: $e');
     } finally {
       setState(() => isUploading = false);
     }

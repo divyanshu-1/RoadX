@@ -8,6 +8,11 @@ import 'pages/profile.dart';
 // Route names
 class AppRoutes {
   static const String login = '/';
+  static const String userLogin = '/user-login';
+  static const String adminLogin = '/admin-login';
+  static const String carOwnerLogin = '/car-owner-login';
+  static const String ownerRegister = '/owner-register';
+  static const String rtoLogin = '/rto-login';
   static const String userShell = '/user';
   static const String admin = '/admin';
   static const String emergency = '/emergency';
